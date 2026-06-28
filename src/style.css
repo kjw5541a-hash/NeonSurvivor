@@ -1,0 +1,332 @@
+/* --- 기본 리셋 및 폰트 설정 --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none; /* 모바일 브라우저의 기본 더블탭 줌, 스크롤 동작 차단 */
+}
+
+body {
+  background-color: #030712; /* Deep Black/Navy */
+  color: #f9fafb;
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 500px; /* 모바일 세로형 최대 너비 설정 */
+  max-height: 888px; /* 9:16 비율 제한 */
+  aspect-ratio: 9 / 16;
+  background-color: #0b0f19;
+  box-shadow: 0 0 40px rgba(0, 242, 254, 0.15); /* 은은한 네온 광 glow */
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 데스크탑 웹 브라우저에서 볼 때 경계선 설정 */
+@media (min-width: 501px) {
+  #app {
+    border: 2px solid rgba(0, 242, 254, 0.3);
+  }
+}
+
+/* --- HTML5 Canvas --- */
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* --- 공통 UI 스타일 --- */
+.ui-overlay {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.ui-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  background: rgba(3, 7, 18, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 24px;
+  text-align: center;
+  transition: opacity 0.3s ease;
+}
+
+.ui-screen.active {
+  display: flex;
+}
+
+/* --- 상단 HUD --- */
+#hud-container {
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xp-bar-wrapper {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+#xp-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
+  box-shadow: 0 0 10px #00f2fe;
+  transition: width 0.1s ease-out;
+}
+
+.hud-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.hud-item {
+  background: rgba(15, 23, 42, 0.6);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.hud-item .label {
+  font-size: 11px;
+  color: #00f2fe;
+  letter-spacing: 0.5px;
+}
+
+.hud-item .value {
+  color: #f3f4f6;
+  font-weight: 800;
+}
+
+.hud-item.time {
+  font-size: 18px;
+  background: none;
+  border: none;
+  color: #00f2fe;
+  text-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
+  font-weight: 800;
+}
+
+/* --- 버튼 스타일 --- */
+.btn {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  pointer-events: auto;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  color: #030712;
+  box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 10px rgba(0, 242, 254, 0.2);
+}
+
+/* --- 메인 스타트 화면 --- */
+.game-title {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  color: #f9fafb;
+}
+
+.game-title .highlight {
+  background: linear-gradient(90deg, #ff007f, #7f00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(255, 0, 127, 0.2);
+}
+
+.game-subtitle {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-bottom: 40px;
+  font-weight: 400;
+}
+
+/* --- 레벨업 오버레이 & 카드 선택 --- */
+.levelup-dialog {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  pointer-events: auto;
+}
+
+.screen-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #00f2fe;
+  text-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+}
+
+.screen-subtitle {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.upgrade-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+}
+
+.upgrade-card:hover, .upgrade-card:active {
+  background: rgba(0, 242, 254, 0.1);
+  border-color: #00f2fe;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 242, 254, 0.25);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  background: rgba(0, 242, 254, 0.15);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.2);
+}
+
+.card-info {
+  flex: 1;
+}
+
+.card-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.card-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f9fafb;
+}
+
+.card-level {
+  font-size: 12px;
+  font-weight: 600;
+  color: #00f2fe;
+  background: rgba(0, 242, 254, 0.1);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.card-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+/* --- 결과 화면 --- */
+.result-dialog {
+  width: 100%;
+  max-width: 320px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 0, 127, 0.3);
+  border-radius: 24px;
+  padding: 32px 24px;
+  box-shadow: 0 10px 30px rgba(255, 0, 127, 0.15);
+  pointer-events: auto;
+}
+
+.result-dialog .screen-title {
+  color: #ff007f;
+  text-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
+  margin-bottom: 24px;
+}
+
+.result-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+  text-align: left;
+}
+
+.result-stat-item {
+  font-size: 15px;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+}
+
+.result-stat-item .value {
+  color: #f9fafb;
+  font-weight: 700;
+}
