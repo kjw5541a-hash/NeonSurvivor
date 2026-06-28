@@ -1,3 +1,10 @@
+// Vite 번들러가 빌드 시 이미지 에셋 경로를 난독화 해시 주소로 자동 연동하도록 정적 임포트 처리
+import punkIdleImg from '../assets/Punk_idle.png';
+import playerRunImg from '../assets/player_run.png';
+import punkHurtImg from '../assets/Punk_hurt.png';
+import punkDeathImg from '../assets/Punk_death.png';
+import punkAttackImg from '../assets/Punk_attack3.png';
+
 export class Player {
   constructor(x, y) {
     this.x = x;
@@ -28,13 +35,13 @@ export class Player {
     // 공격 방향 및 스프라이트 상태
     this.angle = 0;
 
-    // 픽셀 아트 애니메이션 데이터 (상황별 스프라이트 시트 분리 로드)
+    // 픽셀 아트 애니메이션 데이터 (Vite 에셋 해시 경로 바인딩)
     this.sprites = {
-      idle: { img: new Image(), src: '/src/assets/Punk_idle.png', frames: 4, speed: 8 },
-      run: { img: new Image(), src: '/src/assets/player_run.png', frames: 6, speed: 6 },
-      hurt: { img: new Image(), src: '/src/assets/Punk_hurt.png', frames: 2, speed: 7 },
-      death: { img: new Image(), src: '/src/assets/Punk_death.png', frames: 6, speed: 8 },
-      attack: { img: new Image(), src: '/src/assets/Punk_attack3.png', frames: 8, speed: 5 }
+      idle: { img: new Image(), src: punkIdleImg, frames: 4, speed: 8 },
+      run: { img: new Image(), src: playerRunImg, frames: 6, speed: 6 },
+      hurt: { img: new Image(), src: punkHurtImg, frames: 2, speed: 7 },
+      death: { img: new Image(), src: punkDeathImg, frames: 6, speed: 8 },
+      attack: { img: new Image(), src: punkAttackImg, frames: 8, speed: 5 }
     };
 
     // 소스 로드 일괄 처리
@@ -74,14 +81,11 @@ export class Player {
   triggerAttack() {
     if (this.hp <= 0 || this.hurtTimer > 0) return;
 
-    // 이미 공격 중일 때는 리셋 오버라이드 방지하여 모션 연속성 보장
     if (this.attackTimer > 0) return;
 
     if (this.isMoving) {
-      // 1. 이동 중일 때: 달리기 시각 효과를 해치지 않게 짧고 간결한 '스쳐 지나가는 투척 찌르기' (10틱만 노출)
       this.attackTimer = 10;
     } else {
-      // 2. 멈춰 서서 기술을 쓸 때: 기 모으고 포탄 뿜는 화려한 8프레임 전 모션 완벽 상영 (8프레임 * 5틱 = 40틱 할당)
       this.attackTimer = 40;
     }
   }

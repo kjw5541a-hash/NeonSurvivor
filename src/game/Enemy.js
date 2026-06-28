@@ -1,3 +1,11 @@
+// Vite 빌드 시 몬스터 이미지 파일이 번들링 과정에서 자동 해싱 매핑되도록 정적 임포트 처리
+import slime1WalkImg from '../assets/Slime1_Walk_with_shadow.png';
+import slime1HurtImg from '../assets/Slime1_Hurt_with_shadow.png';
+import slime2WalkImg from '../assets/Slime2_Walk_with_shadow.png';
+import slime2RunImg from '../assets/Slime2_Run_with_shadow.png';
+import slime2HurtImg from '../assets/Slime2_Hurt_with_shadow.png';
+import slime2DeathImg from '../assets/Slime2_Death_with_shadow.png';
+
 export class Enemy {
   constructor(x, y, type = 'standard') {
     this.x = x;
@@ -8,7 +16,7 @@ export class Enemy {
     this.isDead = false;
     this.dying = false;
     this.deathTimer = 0;
-    this.maxDeathDuration = 50; // 기본 사망 연출 프레임수
+    this.maxDeathDuration = 50; 
 
     // 피격 시 넉백 물리
     this.knockbackX = 0;
@@ -29,9 +37,9 @@ export class Enemy {
     // 1. 기본 슬라임 (standard) 애니메이션 리소스 바인딩
     if (this.type === 'standard') {
       this.spriteWalk = new Image();
-      this.spriteWalk.src = '/src/assets/Slime1_Walk_with_shadow.png'; 
+      this.spriteWalk.src = slime1WalkImg; 
       this.spriteHurt = new Image();
-      this.spriteHurt.src = '/src/assets/Slime1_Hurt_with_shadow.png'; 
+      this.spriteHurt.src = slime1HurtImg; 
 
       this.frameWidth = 64;
       this.frameHeight = 64;
@@ -47,20 +55,20 @@ export class Enemy {
     // 2. 두 번째 슬라임 (fast) 애니메이션 리소스 바인딩 (달리기/사망 포함)
     if (this.type === 'fast') {
       this.spriteWalk = new Image();
-      this.spriteWalk.src = '/src/assets/Slime2_Walk_with_shadow.png';
+      this.spriteWalk.src = slime2WalkImg;
       this.spriteRun = new Image();
-      this.spriteRun.src = '/src/assets/Slime2_Run_with_shadow.png';
+      this.spriteRun.src = slime2RunImg;
       this.spriteHurt = new Image();
-      this.spriteHurt.src = '/src/assets/Slime2_Hurt_with_shadow.png';
+      this.spriteHurt.src = slime2HurtImg;
       this.spriteDeath = new Image();
-      this.spriteDeath.src = '/src/assets/Slime2_Death_with_shadow.png';
+      this.spriteDeath.src = slime2DeathImg;
 
       this.frameWidth = 64;
       this.frameHeight = 64;
       this.totalWalkFrames = 8;
       this.totalRunFrames = 8;
       this.totalHurtFrames = 5;
-      this.totalDeathFrames = 10; // 사망 10프레임
+      this.totalDeathFrames = 10; 
       
       this.currentFrame = 0;
       this.animTimer = 0;
@@ -68,7 +76,7 @@ export class Enemy {
       this.row = 0;
 
       // AI 돌격 패턴 파라미터
-      this.aiState = 'walk'; // 'walk', 'run'
+      this.aiState = 'walk'; 
       this.runTimer = 0;
       this.runCooldown = 0;
     }
@@ -80,12 +88,12 @@ export class Enemy {
     switch (this.type) {
       case 'fast':
         this.radius = 11;
-        this.speed = 1.9; // 기본 걷기 속도
+        this.speed = 1.9; 
         this.hp = 12;
         this.maxHp = 12;
         this.damage = 6;
         this.xpValue = 1;
-        this.color = '#00f2fe'; // 네온 블루
+        this.color = '#00f2fe'; 
         this.points = 4; 
         break;
       case 'tank':
@@ -162,7 +170,6 @@ export class Enemy {
     this.hp -= damageToTake;
     this.invincibilityFrames = this.maxInvincibilityFrames;
 
-    // 피격 시 프레임 리셋
     if (this.type === 'standard' || this.type === 'fast') {
       this.currentFrame = 0;
       this.animTimer = 0;
@@ -199,12 +206,10 @@ export class Enemy {
       this.hp = 0;
       this.dying = true;
       
-      // 사망 애니메이션 연출 타임 돌입
       if (this.type === 'fast') {
-        this.maxDeathDuration = 50; // 50프레임 동안 사망 애니메이션 상영
+        this.maxDeathDuration = 50; 
         this.deathTimer = 50;
       } else {
-        // 사망 애니메이션이 제공되지 않는 일반/특수 몬스터는 짧은 연출 뒤 소멸
         this.maxDeathDuration = 15;
         this.deathTimer = 15;
       }
@@ -216,7 +221,6 @@ export class Enemy {
       this.invincibilityFrames--;
     }
 
-    // 1. 사망 중(dying) 상태 처리
     if (this.dying) {
       this.x += this.knockbackX;
       this.y += this.knockbackY;
@@ -225,12 +229,11 @@ export class Enemy {
 
       this.deathTimer--;
       if (this.deathTimer <= 0) {
-        this.isDead = true; // 최종 삭제 승격
+        this.isDead = true; 
       }
       return;
     }
 
-    // 2. 빙결 상태 처리
     if (this.freezeTimer > 0) {
       this.freezeTimer--;
       this.knockbackX = 0;
@@ -252,7 +255,6 @@ export class Enemy {
       return; 
     }
 
-    // 3. 화상 상태 처리
     if (this.burnTimer > 0) {
       this.burnTimer--;
       this.burnIntervalTimer--;
@@ -295,7 +297,6 @@ export class Enemy {
       }
     }
 
-    // 4. 물리 및 플레이어 추적 이동
     const dx = player.x - this.x;
     const dy = player.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -307,21 +308,18 @@ export class Enemy {
       this.knockbackX *= this.knockbackFriction;
       this.knockbackY *= this.knockbackFriction;
 
-      // 슬라임2 (fast) 돌격 기계적 AI 상태 전환
       if (this.type === 'fast') {
         if (this.aiState === 'walk') {
           if (this.runCooldown > 0) this.runCooldown--;
           
-          // 거리가 150px 이하로 좁혀지면 돌격 상태로 전환
           if (this.runCooldown <= 0 && dist < 150) {
             this.aiState = 'run';
-            this.runTimer = 60; // 1초간 돌격
+            this.runTimer = 60; 
             this.currentFrame = 0;
             this.animTimer = 0;
           }
         } else if (this.aiState === 'run') {
           this.runTimer--;
-          // 1초 돌격이 종료되면 1.5초(90프레임) 걷기 쿨다운 적용
           if (this.runTimer <= 0) {
             this.aiState = 'walk';
             this.runCooldown = 90;
@@ -330,14 +328,12 @@ export class Enemy {
           }
         }
 
-        // 상태별 속도 배정
         this.speed = this.aiState === 'run' ? 3.8 : 1.9;
       }
 
       this.x += (dx / dist) * this.speed;
       this.y += (dy / dist) * this.speed;
 
-      // 5. 방향별 스프라이트 행(row) 선택 및 애니메이션 제어
       if (this.type === 'standard' || this.type === 'fast') {
         if (Math.abs(dy) > Math.abs(dx)) {
           this.row = dy > 0 ? 0 : 1; 
@@ -345,7 +341,6 @@ export class Enemy {
           this.row = dx > 0 ? 3 : 2; 
         }
 
-        // 피격 무적 프레임 동안에는 애니메이션 갱신 정지
         if (this.invincibilityFrames <= 0) {
           this.animTimer++;
           
@@ -353,7 +348,7 @@ export class Enemy {
           let frameLimit = this.totalWalkFrames;
 
           if (this.type === 'fast' && this.aiState === 'run') {
-            speedLimit = 4; // 뛰어갈 때는 발을 매우 빠르게 움직임
+            speedLimit = 4; 
             frameLimit = this.totalRunFrames;
           }
 
@@ -394,7 +389,6 @@ export class Enemy {
       shadowBlur = 12;
     }
 
-    // 1. 슬라임1(standard) 그리기
     if (this.type === 'standard') {
       ctx.shadowColor = shadowColor;
       ctx.shadowBlur = shadowBlur;
@@ -405,7 +399,6 @@ export class Enemy {
       let frameIndex;
 
       if (this.dying) {
-        // 슬라임1은 사망 시 걷기 모션에서 스무스하게 페이드아웃 연출
         ctx.globalAlpha = Math.max(this.deathTimer / this.maxDeathDuration, 0);
         activeSprite = this.spriteWalk;
         frameIndex = this.currentFrame;
@@ -426,33 +419,27 @@ export class Enemy {
         this.x - drawSize / 2, this.y - drawSize / 2, drawSize, drawSize
       );
 
-    // 2. 슬라임2(fast) 그리기 (걷기, 달리기, 피격, 사망 전 스프라이트 지원)
     } else if (this.type === 'fast') {
       ctx.shadowColor = shadowColor;
       ctx.shadowBlur = shadowBlur;
 
-      // 슬라임1과 완전히 일치하는 비주얼/물리 비율 (8.3배 적용)
-      const drawSize = this.radius * 8.3; // 11 * 8.3 = 91.3px (물리반지름 11에 정확히 비례 정렬)
+      const drawSize = this.radius * 8.3; 
       
       let activeSprite;
       let frameIndex;
 
       if (this.dying) {
-        // 사망 상태: Slime2_Death_with_shadow.png 사용 (10프레임)
         activeSprite = this.spriteDeath;
         const progress = Math.max(this.maxDeathDuration - this.deathTimer, 0);
         frameIndex = Math.floor(progress / (this.maxDeathDuration / this.totalDeathFrames));
-        frameIndex = Math.min(frameIndex, this.totalDeathFrames - 1); // 마지막 프레임 고정
+        frameIndex = Math.min(frameIndex, this.totalDeathFrames - 1); 
       } else if (this.invincibilityFrames > 0) {
-        // 피격 상태: Slime2_Hurt_with_shadow.png 사용 (5프레임)
         activeSprite = this.spriteHurt;
         frameIndex = Math.floor((this.maxInvincibilityFrames - this.invincibilityFrames) / 2) % this.totalHurtFrames;
       } else if (this.aiState === 'run') {
-        // 돌격 상태: Slime2_Run_with_shadow.png 사용 (8프레임)
         activeSprite = this.spriteRun;
         frameIndex = this.currentFrame;
       } else {
-        // 일반 걷기: Slime2_Walk_with_shadow.png 사용 (8프레임)
         activeSprite = this.spriteWalk;
         frameIndex = this.currentFrame;
       }
@@ -467,7 +454,6 @@ export class Enemy {
       );
 
     } else {
-      // 3. 기타 탱크, 보스 몬스터 기하학 다각형 렌더링
       ctx.shadowColor = shadowColor;
       ctx.shadowBlur = shadowBlur;
       ctx.fillStyle = renderColor;
@@ -495,7 +481,6 @@ export class Enemy {
       ctx.stroke();
     }
 
-    // 체력 바 그리기 (사망 중이 아닐 때만 노출)
     if (this.hp < this.maxHp && !this.dying) {
       const barWidth = this.radius * 2;
       const barHeight = 4;
