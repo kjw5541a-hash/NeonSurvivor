@@ -21,6 +21,7 @@ export class Engine {
     this.startTime = 0;
     this.elapsedTime = 0; 
     this.spawnTimer = 0;
+    this.frameCount = 0; // 프레임 분할 최적화용 카운터 추가
 
     // 카메라 및 쉐이크 효과
     this.camera = { x: 0, y: 0 };
@@ -230,6 +231,7 @@ export class Engine {
   }
 
   update() {
+    this.frameCount++; // 매 프레임 카운트 증가
     // 1. 타이머
     this.elapsedTime = Math.floor((Date.now() - this.startTime) / 1000);
     this.updateHUD();
@@ -298,7 +300,11 @@ export class Engine {
 
     // 7.5 적 상호 간 겹침 방지 (Collision Avoidance - 고유한 경계선 유지)
     const enemyCount = this.enemies.length;
+    const isEvenFrame = (this.frameCount % 2 === 0);
     for (let i = 0; i < enemyCount; i++) {
+      // 프레임에 따라 몬스터 절반씩 번갈아 겹침 연산 진행 (이중 루프 연산량 50% 절감)
+      if ((i % 2 === 0) !== isEvenFrame) continue;
+
       const enemyA = this.enemies[i];
       if (enemyA.dying || enemyA.isDead) continue;
 
@@ -441,6 +447,18 @@ export class Engine {
     }
 
     // 10. 단검 픽업 업데이트 및 흡수 (투사체 루프로 완벽 이관되어 삭제)
+
+    // 10.5 일반 스파크 파티클 Capping (최대 150개 제한으로 드로잉 렉 차단, 데미지 텍스트는 전원 보존)
+    if (this.particles.length > 250) {
+      let sparkCount = 0;
+      this.particles = this.particles.filter(p => {
+        if (p.type === 'spark') {
+          sparkCount++;
+          return sparkCount < 150; // 스파크는 최대 150개까지만 유지
+        }
+        return true; // damage_text, level_up, lightning 등 핵심 피드백은 전원 유지
+      });
+    }
 
     // 11. 파티클 업데이트
     ParticleSystem.update(this.particles);

@@ -287,7 +287,7 @@ export class Enemy {
         }
       }
 
-      if (Math.random() < 0.2) {
+      if (Math.random() < 0.05) { // 스폰 빈도 20%에서 5%로 하향 조정
         particles.push({
           type: 'spark',
           x: this.x + (Math.random() - 0.5) * this.radius * 1.5,
