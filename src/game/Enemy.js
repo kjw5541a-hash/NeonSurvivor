@@ -98,8 +98,8 @@ export class Enemy {
       this.spriteAttach = new Image();
       this.spriteAttach.src = slime3AttachImg;
 
-      this.frameWidth = 71; // 568 / 8 = 71 (가로 1줄 시트 기준)
-      this.frameHeight = 62;
+      this.frameWidth = 64; // 512 / 8 = 64px
+      this.frameHeight = 64; // 256 / 4 = 64px (4방향 정식 시트 적용)
       this.totalWalkFrames = 8;
       this.totalDeathFrames = 10;
       this.totalAttachFrames = 9;
@@ -655,8 +655,8 @@ export class Enemy {
       } else {
         activeSprite = this.spriteWalk;
         frameIndex = this.currentFrame;
-        fw = 71;   // Walk 가로 한칸
-        fh = 62;   // Walk 세로 한칸
+        fw = 64;   // Walk 가로 한칸
+        fh = 64;   // Walk 세로 한칸
       }
 
       // 이미지 로드가 완료되었을 때만 그리기 (로드 전 깨진 엑박 네모 방지)
@@ -664,13 +664,8 @@ export class Enemy {
         ctx.save();
         ctx.translate(this.x, this.y);
 
-        // Walk 상태일 때만 좌우 방향에 따른 대칭 반전
-        if (!isDeathOrAttach && !this.facingRight) {
-          ctx.scale(-1, 1);
-        }
-
         const sx = frameIndex * fw;
-        const sy = isDeathOrAttach ? this.row * fh : 0;
+        const sy = this.row * fh; // 3종 에셋 모두 4개 방향 row 적용!
 
         // Death/Attach 의 경우 높이가 256px로 크므로 찌그러지지 않게 세로 스케일 비례 렌더링
         const dw = drawSize;
