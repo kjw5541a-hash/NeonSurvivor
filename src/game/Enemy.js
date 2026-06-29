@@ -460,7 +460,7 @@ export class Enemy {
         }
       }
 
-      // 각 몹의 FSM 속도를 기반으로 위치 갱신
+      // 각 몹의 FSM 속도를 기반으로 위치 갱신 (Atan2 삼각함수를 활용해 dist=0 나누기0 에러 완벽 박멸)
       if (this.type === 'fast' && this.aiState === 'dash') {
         this.x += Math.cos(this.dashAngle) * this.speed;
         this.y += Math.sin(this.dashAngle) * this.speed;
@@ -473,12 +473,14 @@ export class Enemy {
           this.x += this.knockbackX + this.wanderVx * this.speed;
           this.y += this.knockbackY + this.wanderVy * this.speed;
         } else if (this.aiState === 'dash') {
-          this.x += this.knockbackX + (dx / dist) * this.speed;
-          this.y += this.knockbackY + (dy / dist) * this.speed;
+          const followAngle = Math.atan2(dy, dx);
+          this.x += this.knockbackX + Math.cos(followAngle) * this.speed;
+          this.y += this.knockbackY + Math.sin(followAngle) * this.speed;
         }
       } else {
-        this.x += (dx / dist) * this.speed;
-        this.y += (dy / dist) * this.speed;
+        const followAngle = Math.atan2(dy, dx);
+        this.x += Math.cos(followAngle) * this.speed;
+        this.y += Math.sin(followAngle) * this.speed;
       }
 
       // 5. 방향별 스프라이트 행(row) 선택 및 애니메이션 제어
