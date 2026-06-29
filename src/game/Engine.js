@@ -537,14 +537,10 @@ export class Engine {
         spawnTypes.push('fast');
       }
       if (this.elapsedTime >= 70) {
-        spawnInterval = 42;
-        spawnTypes.push('tank');
+        spawnInterval = 35;
+        spawnTypes.push('tank_heal'); // 세 번째 몬스터로 돌 슬라임 바로 등판
       }
-      if (this.elapsedTime >= 100) {
-        spawnInterval = 30; // 스폰 젠 주기 추가 단축
-        spawnTypes.push('tank_heal'); // 세 번째 몬스터 유입
-      }
-      if (this.elapsedTime >= 140) {
+      if (this.elapsedTime >= 120) {
         spawnInterval = 18; 
       }
 
