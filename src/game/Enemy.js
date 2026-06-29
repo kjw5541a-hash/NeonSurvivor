@@ -644,13 +644,13 @@ export class Enemy {
         frameIndex = Math.floor(progress / (this.maxDeathDuration / this.totalDeathFrames));
         frameIndex = Math.min(frameIndex, this.totalDeathFrames - 1); 
         isDeathOrAttach = true;
-        fw = 58.7; 
+        fw = 58;  // 소수점 58.7 ➔ 58 정수 고정으로 보간 번짐 오류 원천 제거!
         fh = 256;  
       } else if (this.aiState === 'heal') {
         activeSprite = this.spriteAttach;
         frameIndex = this.currentFrame;
         isDeathOrAttach = true;
-        fw = 64.4; 
+        fw = 64;  // 소수점 64.4 ➔ 64 정수 고정으로 보간 번짐 오류 원천 제거!
         fh = 256;  
       } else {
         activeSprite = this.spriteWalk;
@@ -667,13 +667,15 @@ export class Enemy {
         ctx.scale(-1, 1);
       }
 
-      const sx = frameIndex * fw;
-      const sy = this.row * fh; // 3종 에셋 모두 4개 방향 row 적용
+      // drawImage 호출 시 소수점 연산에 의한 subpixel stretching 방지하기 위해 정수 강제화 적용
+      const sx = Math.floor(frameIndex * fw);
+      const sy = Math.floor(this.row * fh);
+      const sw = Math.floor(fw);
+      const sh = Math.floor(fh);
 
-      // 상하 여백 캔버스를 1:1 비율인 drawSize 정사각형 크기로 맞춰 그립니다.
       ctx.drawImage(
         activeSprite,
-        sx, sy, fw, fh,
+        sx, sy, sw, sh,
         -drawSize / 2, -drawSize / 2, drawSize, drawSize
       );
       ctx.restore();
