@@ -1,6 +1,7 @@
 // Vite 빌드 시 몬스터 이미지 파일이 번들링 과정에서 자동 해싱 매핑되도록 정적 임포트 처리
 import slime1WalkImg from '../assets/Slime1_Walk_with_shadow.png';
 import slime1HurtImg from '../assets/Slime1_Hurt_with_shadow.png';
+import slime1DeathImg from '../assets/Slime1_Death_with_shadow.png'; // 새로 추가
 import slime2WalkImg from '../assets/Slime2_Walk_with_shadow.png';
 import slime2RunImg from '../assets/Slime2_Run_with_shadow.png';
 import slime2HurtImg from '../assets/Slime2_Hurt_with_shadow.png';
@@ -34,17 +35,20 @@ export class Enemy {
     this.burnIntervalTimer = 0;
     this.freezeTimer = 0;
 
-    // 1. 기본 슬라임 (standard) 애니메이션 리소스 바인딩
+    // 1. 기본 슬라임 (standard) 애니메이션 리소스 바인딩 (사망 포함)
     if (this.type === 'standard') {
       this.spriteWalk = new Image();
       this.spriteWalk.src = slime1WalkImg; 
       this.spriteHurt = new Image();
       this.spriteHurt.src = slime1HurtImg; 
+      this.spriteDeath = new Image();
+      this.spriteDeath.src = slime1DeathImg;
 
       this.frameWidth = 64;
       this.frameHeight = 64;
       this.totalWalkFrames = 8;
       this.totalHurtFrames = 5;
+      this.totalDeathFrames = 10; // 10프레임 사망 시트
       
       this.currentFrame = 0;
       this.animTimer = 0;
@@ -206,7 +210,8 @@ export class Enemy {
       this.hp = 0;
       this.dying = true;
       
-      if (this.type === 'fast') {
+      // standard 와 fast 모두 사망 10프레임 지원 연출 설정
+      if (this.type === 'standard' || this.type === 'fast') {
         this.maxDeathDuration = 50; 
         this.deathTimer = 50;
       } else {
@@ -276,7 +281,7 @@ export class Enemy {
         if (this.hp <= 0) {
           this.hp = 0;
           this.dying = true;
-          this.maxDeathDuration = this.type === 'fast' ? 50 : 15;
+          this.maxDeathDuration = (this.type === 'fast' || this.type === 'standard') ? 50 : 15;
           this.deathTimer = this.maxDeathDuration;
           return;
         }
@@ -308,37 +313,33 @@ export class Enemy {
       this.knockbackX *= this.knockbackFriction;
       this.knockbackY *= this.knockbackFriction;
 
-      // 4. 슬라임2 (fast) 3단계 FSM 돌격 패턴 제어
       if (this.type === 'fast') {
         if (this.aiState === 'walk') {
           if (this.runCooldown > 0) this.runCooldown--;
           
-          // 플레이어 인식 가능 160px 안으로 오면 조준(aim) 단계 돌입 및 락온
-          if (this.runCooldown <= 0 && dist < 160) {
+          if (this.runCooldown <= 0 && dist < 150) {
             this.aiState = 'aim';
-            this.aimTimer = 24; // 0.4초 동안 선딜레이 정지
-            this.dashTargetX = player.x; // 플레이어의 현재 위치 락온!
+            this.aimTimer = 24; 
+            this.dashTargetX = player.x; 
             this.dashTargetY = player.y;
             this.speed = 0;
             this.currentFrame = 0;
             this.animTimer = 0;
           }
         } else if (this.aiState === 'aim') {
-          this.speed = 0; // 대쉬 준비 중 정지
+          this.speed = 0; 
           this.aimTimer--;
           if (this.aimTimer <= 0) {
             this.aiState = 'dash';
-            this.dashTimer = 22; // 0.36초 동안 대쉬 질주
-            // 락온 당시의 타겟 각도 고정
+            this.dashTimer = 22; 
             this.dashAngle = Math.atan2(this.dashTargetY - this.y, this.dashTargetX - this.x);
-            this.speed = 6.2; // 초고속 대쉬 질주 속도
+            this.speed = 6.2; 
             this.currentFrame = 0;
             this.animTimer = 0;
           }
         } else if (this.aiState === 'dash') {
           this.dashTimer--;
           this.speed = 6.2;
-          // 돌격 후 걷기로 복귀 및 2초(120프레임) 쿨타임
           if (this.dashTimer <= 0) {
             this.aiState = 'walk';
             this.runCooldown = 120;
@@ -349,7 +350,6 @@ export class Enemy {
         }
       }
 
-      // 대쉬 중에는 락온된 고정각도로 직선 질주, 그 외에는 플레이어 추적 이동
       if (this.type === 'fast' && this.aiState === 'dash') {
         this.x += Math.cos(this.dashAngle) * this.speed;
         this.y += Math.sin(this.dashAngle) * this.speed;
@@ -358,12 +358,10 @@ export class Enemy {
         this.y += (dy / dist) * this.speed;
       }
 
-      // 5. 방향별 스프라이트 행(row) 선택 및 애니메이션 제어
       if (this.type === 'standard' || this.type === 'fast') {
         let checkDx = dx;
         let checkDy = dy;
 
-        // 대쉬 중이거나 조준 중일 때 시선 처리는 락온된 타겟 중심을 보도록 고정
         if (this.type === 'fast' && (this.aiState === 'aim' || this.aiState === 'dash')) {
           checkDx = this.dashTargetX - this.x;
           checkDy = this.dashTargetY - this.y;
@@ -375,7 +373,6 @@ export class Enemy {
           this.row = checkDx > 0 ? 3 : 2; 
         }
 
-        // 피격 무적 프레임 동안에는 애니메이션 갱신 정지
         if (this.invincibilityFrames <= 0) {
           this.animTimer++;
           
@@ -384,10 +381,10 @@ export class Enemy {
 
           if (this.type === 'fast') {
             if (this.aiState === 'aim') {
-              speedLimit = 3; // 기 모으는 발 동동 모션은 빠르게 재생
+              speedLimit = 3; 
               frameLimit = this.totalRunFrames;
             } else if (this.aiState === 'dash') {
-              speedLimit = 4; // 질주 모션 속도
+              speedLimit = 4; 
               frameLimit = this.totalRunFrames;
             }
           }
@@ -439,9 +436,11 @@ export class Enemy {
       let frameIndex;
 
       if (this.dying) {
-        ctx.globalAlpha = Math.max(this.deathTimer / this.maxDeathDuration, 0);
-        activeSprite = this.spriteWalk;
-        frameIndex = this.currentFrame;
+        // 슬라임1 사망 이미지 지원 적용 (10프레임 시트 순환 재생)
+        activeSprite = this.spriteDeath;
+        const progress = Math.max(this.maxDeathDuration - this.deathTimer, 0);
+        frameIndex = Math.floor(progress / (this.maxDeathDuration / this.totalDeathFrames));
+        frameIndex = Math.min(frameIndex, this.totalDeathFrames - 1); 
       } else if (this.invincibilityFrames > 0) {
         activeSprite = this.spriteHurt;
         frameIndex = Math.floor((this.maxInvincibilityFrames - this.invincibilityFrames) / 2) % this.totalHurtFrames;
