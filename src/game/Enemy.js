@@ -308,48 +308,88 @@ export class Enemy {
       this.knockbackX *= this.knockbackFriction;
       this.knockbackY *= this.knockbackFriction;
 
+      // 4. 슬라임2 (fast) 3단계 FSM 돌격 패턴 제어
       if (this.type === 'fast') {
         if (this.aiState === 'walk') {
           if (this.runCooldown > 0) this.runCooldown--;
           
-          if (this.runCooldown <= 0 && dist < 150) {
-            this.aiState = 'run';
-            this.runTimer = 60; 
+          // 플레이어 인식 가능 160px 안으로 오면 조준(aim) 단계 돌입 및 락온
+          if (this.runCooldown <= 0 && dist < 160) {
+            this.aiState = 'aim';
+            this.aimTimer = 24; // 0.4초 동안 선딜레이 정지
+            this.dashTargetX = player.x; // 플레이어의 현재 위치 락온!
+            this.dashTargetY = player.y;
+            this.speed = 0;
             this.currentFrame = 0;
             this.animTimer = 0;
           }
-        } else if (this.aiState === 'run') {
-          this.runTimer--;
-          if (this.runTimer <= 0) {
+        } else if (this.aiState === 'aim') {
+          this.speed = 0; // 대쉬 준비 중 정지
+          this.aimTimer--;
+          if (this.aimTimer <= 0) {
+            this.aiState = 'dash';
+            this.dashTimer = 22; // 0.36초 동안 대쉬 질주
+            // 락온 당시의 타겟 각도 고정
+            this.dashAngle = Math.atan2(this.dashTargetY - this.y, this.dashTargetX - this.x);
+            this.speed = 6.2; // 초고속 대쉬 질주 속도
+            this.currentFrame = 0;
+            this.animTimer = 0;
+          }
+        } else if (this.aiState === 'dash') {
+          this.dashTimer--;
+          this.speed = 6.2;
+          // 돌격 후 걷기로 복귀 및 2초(120프레임) 쿨타임
+          if (this.dashTimer <= 0) {
             this.aiState = 'walk';
-            this.runCooldown = 90;
+            this.runCooldown = 120;
+            this.speed = 1.9;
             this.currentFrame = 0;
             this.animTimer = 0;
           }
         }
-
-        this.speed = this.aiState === 'run' ? 3.8 : 1.9;
       }
 
-      this.x += (dx / dist) * this.speed;
-      this.y += (dy / dist) * this.speed;
+      // 대쉬 중에는 락온된 고정각도로 직선 질주, 그 외에는 플레이어 추적 이동
+      if (this.type === 'fast' && this.aiState === 'dash') {
+        this.x += Math.cos(this.dashAngle) * this.speed;
+        this.y += Math.sin(this.dashAngle) * this.speed;
+      } else {
+        this.x += (dx / dist) * this.speed;
+        this.y += (dy / dist) * this.speed;
+      }
 
+      // 5. 방향별 스프라이트 행(row) 선택 및 애니메이션 제어
       if (this.type === 'standard' || this.type === 'fast') {
-        if (Math.abs(dy) > Math.abs(dx)) {
-          this.row = dy > 0 ? 0 : 1; 
-        } else {
-          this.row = dx > 0 ? 3 : 2; 
+        let checkDx = dx;
+        let checkDy = dy;
+
+        // 대쉬 중이거나 조준 중일 때 시선 처리는 락온된 타겟 중심을 보도록 고정
+        if (this.type === 'fast' && (this.aiState === 'aim' || this.aiState === 'dash')) {
+          checkDx = this.dashTargetX - this.x;
+          checkDy = this.dashTargetY - this.y;
         }
 
+        if (Math.abs(checkDy) > Math.abs(checkDx)) {
+          this.row = checkDy > 0 ? 0 : 1; 
+        } else {
+          this.row = checkDx > 0 ? 3 : 2; 
+        }
+
+        // 피격 무적 프레임 동안에는 애니메이션 갱신 정지
         if (this.invincibilityFrames <= 0) {
           this.animTimer++;
           
           let speedLimit = this.animSpeed;
           let frameLimit = this.totalWalkFrames;
 
-          if (this.type === 'fast' && this.aiState === 'run') {
-            speedLimit = 4; 
-            frameLimit = this.totalRunFrames;
+          if (this.type === 'fast') {
+            if (this.aiState === 'aim') {
+              speedLimit = 3; // 기 모으는 발 동동 모션은 빠르게 재생
+              frameLimit = this.totalRunFrames;
+            } else if (this.aiState === 'dash') {
+              speedLimit = 4; // 질주 모션 속도
+              frameLimit = this.totalRunFrames;
+            }
           }
 
           if (this.animTimer % speedLimit === 0) {
@@ -436,7 +476,7 @@ export class Enemy {
       } else if (this.invincibilityFrames > 0) {
         activeSprite = this.spriteHurt;
         frameIndex = Math.floor((this.maxInvincibilityFrames - this.invincibilityFrames) / 2) % this.totalHurtFrames;
-      } else if (this.aiState === 'run') {
+      } else if (this.aiState === 'aim' || this.aiState === 'dash') {
         activeSprite = this.spriteRun;
         frameIndex = this.currentFrame;
       } else {

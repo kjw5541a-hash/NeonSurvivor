@@ -296,6 +296,40 @@ export class Engine {
       }
     }
 
+    // 7.5 적 상호 간 겹침 방지 (Collision Avoidance - 고유한 경계선 유지)
+    const enemyCount = this.enemies.length;
+    for (let i = 0; i < enemyCount; i++) {
+      const enemyA = this.enemies[i];
+      if (enemyA.dying || enemyA.isDead) continue;
+
+      for (let j = i + 1; j < enemyCount; j++) {
+        const enemyB = this.enemies[j];
+        if (enemyB.dying || enemyB.isDead) continue;
+
+        const dx = enemyB.x - enemyA.x;
+        const dy = enemyB.y - enemyA.y;
+        
+        // 연산 효율화를 위해 제곱 거리로 1차 판정
+        const distSq = dx * dx + dy * dy;
+        const minDist = enemyA.radius + enemyB.radius;
+        const minDistSq = minDist * minDist;
+
+        if (distSq < minDistSq) {
+          const dist = Math.sqrt(distSq) || 0.001;
+          const overlap = minDist - dist;
+          
+          // 반대 방향 벡터로 겹침 보정 (서로 밀어냄)
+          const forceX = (dx / dist) * overlap * 0.5;
+          const forceY = (dy / dist) * overlap * 0.5;
+
+          enemyA.x -= forceX;
+          enemyA.y -= forceY;
+          enemyB.x += forceX;
+          enemyB.y += forceY;
+        }
+      }
+    }
+
     // 8. 투사체 업데이트 및 적 충돌 처리
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const proj = this.projectiles[i];
