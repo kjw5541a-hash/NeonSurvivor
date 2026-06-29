@@ -630,12 +630,13 @@ export class Enemy {
       ctx.shadowColor = shadowColor;
       ctx.shadowBlur = shadowBlur;
 
-      // 1, 2번 슬라임 기준 70% 크기 비율 유지 적용
-      const drawSize = this.radius * 8.3; 
+      const drawSize = this.radius * 8.3; // 83px 너비 기준
       
       let activeSprite;
       let frameIndex;
       let isDeathOrAttach = false;
+      let fw = 71;
+      let fh = 62;
 
       if (this.dying) {
         activeSprite = this.spriteDeath;
@@ -643,35 +644,56 @@ export class Enemy {
         frameIndex = Math.floor(progress / (this.maxDeathDuration / this.totalDeathFrames));
         frameIndex = Math.min(frameIndex, this.totalDeathFrames - 1); 
         isDeathOrAttach = true;
+        fw = 58.7; // Death 가로 한칸
+        fh = 256;  // Death 세로 한칸 (1024/4 = 256)
       } else if (this.aiState === 'heal') {
         activeSprite = this.spriteAttach;
         frameIndex = this.currentFrame;
         isDeathOrAttach = true;
+        fw = 64.4; // Attach 가로 한칸
+        fh = 256;  // Attach 세로 한칸 (1024/4 = 256)
       } else {
         activeSprite = this.spriteWalk;
         frameIndex = this.currentFrame;
+        fw = 71;   // Walk 가로 한칸
+        fh = 62;   // Walk 세로 한칸
       }
 
-      ctx.save();
-      // 몬스터 위치 이동
-      ctx.translate(this.x, this.y);
+      // 이미지 로드가 완료되었을 때만 그리기 (로드 전 깨진 엑박 네모 방지)
+      if (activeSprite.complete && activeSprite.naturalWidth !== 0) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
 
-      // Walk 시트(1줄)의 경우에만 좌우 대칭 스케일 적용
-      if (!isDeathOrAttach && !this.facingRight) {
-        ctx.scale(-1, 1);
+        // Walk 상태일 때만 좌우 방향에 따른 대칭 반전
+        if (!isDeathOrAttach && !this.facingRight) {
+          ctx.scale(-1, 1);
+        }
+
+        const sx = frameIndex * fw;
+        const sy = isDeathOrAttach ? this.row * fh : 0;
+
+        // Death/Attach 의 경우 높이가 256px로 크므로 찌그러지지 않게 세로 스케일 비례 렌더링
+        const dw = drawSize;
+        const dh = drawSize * (fh / fw);
+
+        // X축: 가로 중앙 정렬 / Y축: 발밑 바닥 정렬
+        ctx.drawImage(
+          activeSprite,
+          sx, sy, fw, fh,
+          -dw / 2, -dh + this.radius, dw, dh
+        );
+        ctx.restore();
+      } else {
+        // 이미지 로딩 중일 때 네모박스 대신 보여줄 빛나는 둥근 실루엣
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = shadowColor;
+        ctx.shadowColor = shadowColor;
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.restore();
       }
-
-      const fw = isDeathOrAttach ? 64 : 71;
-      const fh = isDeathOrAttach ? 64 : 62;
-      const sx = frameIndex * fw;
-      const sy = isDeathOrAttach ? this.row * fh : 0; // Walk는 1줄이므로 무조건 0행
-
-      ctx.drawImage(
-        activeSprite,
-        sx, sy, fw, fh,
-        -drawSize / 2, -drawSize / 2, drawSize, drawSize
-      );
-      ctx.restore();
 
     } else {
       ctx.shadowColor = shadowColor;
