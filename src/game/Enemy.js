@@ -1,11 +1,15 @@
 // Vite 빌드 시 몬스터 이미지 파일이 번들링 과정에서 자동 해싱 매핑되도록 정적 임포트 처리
 import slime1WalkImg from '../assets/Slime1_Walk_with_shadow.png';
 import slime1HurtImg from '../assets/Slime1_Hurt_with_shadow.png';
-import slime1DeathImg from '../assets/Slime1_Death_with_shadow.png'; // 새로 추가
+import slime1DeathImg from '../assets/Slime1_Death_with_shadow.png'; 
 import slime2WalkImg from '../assets/Slime2_Walk_with_shadow.png';
 import slime2RunImg from '../assets/Slime2_Run_with_shadow.png';
 import slime2HurtImg from '../assets/Slime2_Hurt_with_shadow.png';
 import slime2DeathImg from '../assets/Slime2_Death_with_shadow.png';
+// 세 번째 슬라임 (Slime3) 정적 임포트 추가
+import slime3WalkImg from '../assets/Slime3_Walk_with_shadow.png';
+import slime3DeathImg from '../assets/Slime3_Death_with_shadow.png';
+import slime3AttachImg from '../assets/Slime3_Attach_with_shadow.png';
 
 export class Enemy {
   constructor(x, y, type = 'standard') {
@@ -48,7 +52,7 @@ export class Enemy {
       this.frameHeight = 64;
       this.totalWalkFrames = 8;
       this.totalHurtFrames = 5;
-      this.totalDeathFrames = 10; // 10프레임 사망 시트
+      this.totalDeathFrames = 10; 
       
       this.currentFrame = 0;
       this.animTimer = 0;
@@ -85,6 +89,34 @@ export class Enemy {
       this.runCooldown = 0;
     }
 
+    // 3. 세 번째 슬라임 (tank_heal) 애니메이션 리소스 바인딩
+    if (this.type === 'tank_heal') {
+      this.spriteWalk = new Image();
+      this.spriteWalk.src = slime3WalkImg;
+      this.spriteDeath = new Image();
+      this.spriteDeath.src = slime3DeathImg;
+      this.spriteAttach = new Image();
+      this.spriteAttach.src = slime3AttachImg;
+
+      this.frameWidth = 71; // 568 / 8 = 71 (가로 1줄 시트 기준)
+      this.frameHeight = 62;
+      this.totalWalkFrames = 8;
+      this.totalDeathFrames = 10;
+      this.totalAttachFrames = 9;
+
+      this.currentFrame = 0;
+      this.animTimer = 0;
+      this.animSpeed = 6;
+      this.row = 0;
+      this.facingRight = true;
+
+      // AI FSM 패턴 변수
+      this.aiState = 'wander'; 
+      this.wanderTimer = 0;
+      this.wanderVx = 0;
+      this.wanderVy = 0;
+    }
+
     this.setupStats();
   }
 
@@ -119,6 +151,17 @@ export class Enemy {
         this.xpValue = 50; 
         this.color = '#ff007f'; 
         this.points = 8; 
+        break;
+      case 'tank_heal':
+        // 1, 2번 슬라임의 70% 크기 (1번 반경 14 기준 70% -> 10)
+        this.radius = 10;
+        this.speed = 1.0; // 느린 속도
+        this.hp = 35; // 튼튼한 체력
+        this.maxHp = 35;
+        this.damage = 12;
+        this.xpValue = 3; // 치료하는 녀석이므로 보상 증가
+        this.color = '#ffaa00'; // 노란 불기둥 색
+        this.points = 0;
         break;
       case 'standard':
       default:
@@ -174,7 +217,7 @@ export class Enemy {
     this.hp -= damageToTake;
     this.invincibilityFrames = this.maxInvincibilityFrames;
 
-    if (this.type === 'standard' || this.type === 'fast') {
+    if (this.type === 'standard' || this.type === 'fast' || this.type === 'tank_heal') {
       this.currentFrame = 0;
       this.animTimer = 0;
     }
@@ -210,8 +253,8 @@ export class Enemy {
       this.hp = 0;
       this.dying = true;
       
-      // standard 와 fast 모두 사망 10프레임 지원 연출 설정
-      if (this.type === 'standard' || this.type === 'fast') {
+      // 10프레임 사망 애니메이션 상영 시간 설정
+      if (this.type === 'standard' || this.type === 'fast' || this.type === 'tank_heal') {
         this.maxDeathDuration = 50; 
         this.deathTimer = 50;
       } else {
@@ -281,7 +324,7 @@ export class Enemy {
         if (this.hp <= 0) {
           this.hp = 0;
           this.dying = true;
-          this.maxDeathDuration = (this.type === 'fast' || this.type === 'standard') ? 50 : 15;
+          this.maxDeathDuration = (this.type === 'fast' || this.type === 'standard' || this.type === 'tank_heal') ? 50 : 15;
           this.deathTimer = this.maxDeathDuration;
           return;
         }
@@ -313,11 +356,12 @@ export class Enemy {
       this.knockbackX *= this.knockbackFriction;
       this.knockbackY *= this.knockbackFriction;
 
+      // 4. 슬라임2 (fast) 3단계 FSM 돌격 패턴 제어
       if (this.type === 'fast') {
         if (this.aiState === 'walk') {
           if (this.runCooldown > 0) this.runCooldown--;
           
-          if (this.runCooldown <= 0 && dist < 150) {
+          if (this.runCooldown <= 0 && dist < 160) {
             this.aiState = 'aim';
             this.aimTimer = 24; 
             this.dashTargetX = player.x; 
@@ -350,15 +394,95 @@ export class Enemy {
         }
       }
 
+      // 4.5 세 번째 슬라임 (tank_heal) FSM AI 패턴 제어
+      if (this.type === 'tank_heal') {
+        const hpPercent = this.hp / this.maxHp;
+
+        // 1. 체력이 30% 이하가 되면 자가 치유(heal) 모드로 전격 진입
+        if (hpPercent <= 0.3 && this.aiState !== 'heal') {
+          this.aiState = 'heal';
+          this.speed = 0;
+          this.currentFrame = 0;
+          this.animTimer = 0;
+        }
+
+        // 2. 상태별 AI 처리
+        if (this.aiState === 'heal') {
+          this.speed = 0;
+
+          // 프레임당 체력 점진 회복 (초당 약 8% 회복 -> 프레임당 약 0.05hp 회복)
+          this.hp = Math.min(this.hp + 0.05, this.maxHp);
+
+          // 힐링 중 연두색 스파크 방출 연출
+          if (Math.random() < 0.15) {
+            particles.push({
+              type: 'spark',
+              x: this.x + (Math.random() - 0.5) * this.radius * 2,
+              y: this.y + (Math.random() - 0.5) * this.radius * 2,
+              vx: 0,
+              vy: -1 - Math.random() * 0.5,
+              color: '#39ff14', // 형광 녹색 힐 스파크
+              radius: 1.5,
+              life: 20,
+              maxLife: 20
+            });
+          }
+
+          // 최대 체력의 70% 이상 채워지면 방황 모드로 정상 복귀
+          if (this.hp >= this.maxHp * 0.7) {
+            this.aiState = 'wander';
+            this.wanderTimer = 0;
+          }
+        } else {
+          // 치유 상태가 아닐 때
+          if (dist < 150) {
+            // 사정거리 내에 들어오면 돌격
+            this.aiState = 'dash';
+            this.speed = 3.2;
+          } else {
+            // 사정거리 밖에서는 랜덤 방황
+            if (this.aiState !== 'wander') {
+              this.aiState = 'wander';
+              this.wanderTimer = 0;
+            }
+
+            this.speed = 0.5; // 방황은 매우 천천히
+            this.wanderTimer--;
+
+            if (this.wanderTimer <= 0) {
+              // 1~2초 동안 임의의 방황 벡터 계산
+              this.wanderTimer = 60 + Math.random() * 60;
+              const randomAngle = Math.random() * Math.PI * 2;
+              this.wanderVx = Math.cos(randomAngle);
+              this.wanderVy = Math.sin(randomAngle);
+            }
+          }
+        }
+      }
+
+      // 각 몹의 FSM 속도를 기반으로 위치 갱신
       if (this.type === 'fast' && this.aiState === 'dash') {
         this.x += Math.cos(this.dashAngle) * this.speed;
         this.y += Math.sin(this.dashAngle) * this.speed;
+      } else if (this.type === 'tank_heal') {
+        if (this.aiState === 'heal') {
+          // 치유 중 정지
+          this.x += this.knockbackX;
+          this.y += this.knockbackY;
+        } else if (this.aiState === 'wander') {
+          this.x += this.knockbackX + this.wanderVx * this.speed;
+          this.y += this.knockbackY + this.wanderVy * this.speed;
+        } else if (this.aiState === 'dash') {
+          this.x += this.knockbackX + (dx / dist) * this.speed;
+          this.y += this.knockbackY + (dy / dist) * this.speed;
+        }
       } else {
         this.x += (dx / dist) * this.speed;
         this.y += (dy / dist) * this.speed;
       }
 
-      if (this.type === 'standard' || this.type === 'fast') {
+      // 5. 방향별 스프라이트 행(row) 선택 및 애니메이션 제어
+      if (this.type === 'standard' || this.type === 'fast' || this.type === 'tank_heal') {
         let checkDx = dx;
         let checkDy = dy;
 
@@ -373,6 +497,9 @@ export class Enemy {
           this.row = checkDx > 0 ? 3 : 2; 
         }
 
+        this.facingRight = checkDx >= 0;
+
+        // 피격 무적 프레임 동안에는 애니메이션 갱신 정지
         if (this.invincibilityFrames <= 0) {
           this.animTimer++;
           
@@ -386,6 +513,14 @@ export class Enemy {
             } else if (this.aiState === 'dash') {
               speedLimit = 4; 
               frameLimit = this.totalRunFrames;
+            }
+          } else if (this.type === 'tank_heal') {
+            if (this.aiState === 'heal') {
+              speedLimit = 5; // 불기둥 기 모으는 속도
+              frameLimit = this.totalAttachFrames;
+            } else {
+              speedLimit = 6;
+              frameLimit = this.totalWalkFrames;
             }
           }
 
@@ -436,7 +571,6 @@ export class Enemy {
       let frameIndex;
 
       if (this.dying) {
-        // 슬라임1 사망 이미지 지원 적용 (10프레임 시트 순환 재생)
         activeSprite = this.spriteDeath;
         const progress = Math.max(this.maxDeathDuration - this.deathTimer, 0);
         frameIndex = Math.floor(progress / (this.maxDeathDuration / this.totalDeathFrames));
@@ -491,6 +625,53 @@ export class Enemy {
         sx, sy, this.frameWidth, this.frameHeight,
         this.x - drawSize / 2, this.y - drawSize / 2, drawSize, drawSize
       );
+
+    } else if (this.type === 'tank_heal') {
+      ctx.shadowColor = shadowColor;
+      ctx.shadowBlur = shadowBlur;
+
+      // 1, 2번 슬라임 기준 70% 크기 비율 유지 적용
+      const drawSize = this.radius * 8.3; 
+      
+      let activeSprite;
+      let frameIndex;
+      let isDeathOrAttach = false;
+
+      if (this.dying) {
+        activeSprite = this.spriteDeath;
+        const progress = Math.max(this.maxDeathDuration - this.deathTimer, 0);
+        frameIndex = Math.floor(progress / (this.maxDeathDuration / this.totalDeathFrames));
+        frameIndex = Math.min(frameIndex, this.totalDeathFrames - 1); 
+        isDeathOrAttach = true;
+      } else if (this.aiState === 'heal') {
+        activeSprite = this.spriteAttach;
+        frameIndex = this.currentFrame;
+        isDeathOrAttach = true;
+      } else {
+        activeSprite = this.spriteWalk;
+        frameIndex = this.currentFrame;
+      }
+
+      ctx.save();
+      // 몬스터 위치 이동
+      ctx.translate(this.x, this.y);
+
+      // Walk 시트(1줄)의 경우에만 좌우 대칭 스케일 적용
+      if (!isDeathOrAttach && !this.facingRight) {
+        ctx.scale(-1, 1);
+      }
+
+      const fw = isDeathOrAttach ? 64 : 71;
+      const fh = isDeathOrAttach ? 64 : 62;
+      const sx = frameIndex * fw;
+      const sy = isDeathOrAttach ? this.row * fh : 0; // Walk는 1줄이므로 무조건 0행
+
+      ctx.drawImage(
+        activeSprite,
+        sx, sy, fw, fh,
+        -drawSize / 2, -drawSize / 2, drawSize, drawSize
+      );
+      ctx.restore();
 
     } else {
       ctx.shadowColor = shadowColor;

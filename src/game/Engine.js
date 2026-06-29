@@ -526,7 +526,6 @@ export class Engine {
     }
   }
 
-  // 몬스터 스폰 난이도 시스템
   handleEnemySpawning() {
     this.spawnTimer--;
     if (this.spawnTimer <= 0) {
@@ -538,11 +537,15 @@ export class Engine {
         spawnTypes.push('fast');
       }
       if (this.elapsedTime >= 70) {
-        spawnInterval = 38;
+        spawnInterval = 42;
         spawnTypes.push('tank');
       }
-      if (this.elapsedTime >= 120) {
-        spawnInterval = 20; 
+      if (this.elapsedTime >= 100) {
+        spawnInterval = 30; // 스폰 젠 주기 추가 단축
+        spawnTypes.push('tank_heal'); // 세 번째 몬스터 유입
+      }
+      if (this.elapsedTime >= 140) {
+        spawnInterval = 18; 
       }
 
       this.spawnTimer = spawnInterval;
