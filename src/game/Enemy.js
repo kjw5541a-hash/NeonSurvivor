@@ -629,8 +629,6 @@ export class Enemy {
       );
 
     } else if (this.type === 'tank_heal') {
-      ctx.shadowColor = shadowColor;
-      ctx.shadowBlur = shadowBlur;
 
       const drawSize = this.radius * 8.3; // 83px 너비 기준
       
@@ -675,16 +673,25 @@ export class Enemy {
       const sw = Math.floor(fw);
       const sh = Math.floor(fh);
 
+      // Death/Attach 에셋은 shadow 끄기 (노란 글로우 박스 방지)
       if (isDeathOrAttach) {
-        // Death/Attach 에셋: 실제 비율(가로 64px : 세로 256px = 1:4)을 유지해서 그리기
-        // 불꽃이 슬라임 발 위치 기준으로 위로 솟아오르도록 Y 정렬
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.shadowColor = shadowColor;
+        ctx.shadowBlur = shadowBlur;
+      }
+
+      if (isDeathOrAttach) {
+        // Death/Attach 에셋: 1:4 비율 유지
+        // 도트 그래픽이 프레임 상단에 위치하므로, 슬라임 중심에서 아래로 펼쳐지게 정렬
         const dw = drawSize;
-        const dh = drawSize * (256 / 64); // 세로는 가로의 4배
+        const dh = drawSize * (fh / fw); // 세로는 가로의 약 4배
         ctx.drawImage(
           activeSprite,
           sx, sy, sw, sh,
-          -dw / 2,           // X: 가로 중앙 정렬
-          -dh + drawSize / 2, // Y: 슬라임 발 위치에서 위로 올라가도록 정렬
+          -dw / 2,            // X: 가로 중앙 정렬
+          -drawSize / 2,      // Y: 슬라임 중심 상단부터 아래로 그려지도록
           dw, dh
         );
       } else {
