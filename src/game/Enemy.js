@@ -646,19 +646,19 @@ export class Enemy {
         frameIndex = Math.floor(progress / (this.maxDeathDuration / this.totalDeathFrames));
         frameIndex = Math.min(frameIndex, this.totalDeathFrames - 1); 
         isDeathOrAttach = true;
-        fw = 58;  // 소수점 58.7 ➔ 58 정수 고정으로 보간 번짐 오류 원천 제거!
-        fh = 256;  
+        fw = 58;  // 587/10 = 58.7 → 58 정수 고정
+        fh = 256; // 1024/4 = 256
       } else if (this.aiState === 'heal') {
         activeSprite = this.spriteAttach;
         frameIndex = this.currentFrame;
         isDeathOrAttach = true;
-        fw = 64;  // 소수점 64.4 ➔ 64 정수 고정으로 보간 번짐 오류 원천 제거!
-        fh = 256;  
+        fw = 64;  // 580/9 = 64.4 → 64 정수 고정
+        fh = 256; // 1024/4 = 256
       } else {
         activeSprite = this.spriteWalk;
         frameIndex = this.currentFrame;
-        fw = 64;   
-        fh = 64;   
+        fw = 64;
+        fh = 64;
       }
 
       ctx.save();
@@ -669,17 +669,32 @@ export class Enemy {
         ctx.scale(-1, 1);
       }
 
-      // drawImage 호출 시 소수점 연산에 의한 subpixel stretching 방지하기 위해 정수 강제화 적용
+      // subpixel stretching 방지: 정수 강제화
       const sx = Math.floor(frameIndex * fw);
       const sy = Math.floor(this.row * fh);
       const sw = Math.floor(fw);
       const sh = Math.floor(fh);
 
-      ctx.drawImage(
-        activeSprite,
-        sx, sy, sw, sh,
-        -drawSize / 2, -drawSize / 2, drawSize, drawSize
-      );
+      if (isDeathOrAttach) {
+        // Death/Attach 에셋: 실제 비율(가로 64px : 세로 256px = 1:4)을 유지해서 그리기
+        // 불꽃이 슬라임 발 위치 기준으로 위로 솟아오르도록 Y 정렬
+        const dw = drawSize;
+        const dh = drawSize * (256 / 64); // 세로는 가로의 4배
+        ctx.drawImage(
+          activeSprite,
+          sx, sy, sw, sh,
+          -dw / 2,           // X: 가로 중앙 정렬
+          -dh + drawSize / 2, // Y: 슬라임 발 위치에서 위로 올라가도록 정렬
+          dw, dh
+        );
+      } else {
+        // Walk: 1:1 정사각형으로 그리기
+        ctx.drawImage(
+          activeSprite,
+          sx, sy, sw, sh,
+          -drawSize / 2, -drawSize / 2, drawSize, drawSize
+        );
+      }
       ctx.restore();
 
     } else {
